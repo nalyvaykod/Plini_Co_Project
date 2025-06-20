@@ -75,7 +75,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.green;
         Gizmos.DrawLine(new Vector3(-horizontalLimit, transform.position.y, transform.position.z),
                         new Vector3(horizontalLimit, transform.position.y, transform.position.z));
         Gizmos.DrawWireCube(transform.position, new Vector3(horizontalLimit * 2, 0.1f, 0.1f));
