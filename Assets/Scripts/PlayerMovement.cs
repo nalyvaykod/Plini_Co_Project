@@ -2,72 +2,64 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Movement Settings")]
     [SerializeField] private float forwardSpeed = 5f;
     [SerializeField] private float sidewaySpeed = 7f;
     [SerializeField] private float horizontalLimit = 3f;
+    [SerializeField] private float inputSmoothTime = 0.1f; 
 
+    [Header("Input Settings")]
     [SerializeField] private bool useAccelerometer = false;
-    [SerializeField] private float swipeSensitivity = 0.1f;
+    [SerializeField] private float swipeSensitivity = 0.005f;
+    [SerializeField] private float mouseSensitivity = 0.1f;
 
-    private Vector3 _lastMousePosition; 
-    private bool _isMouseDown = false;   
-
-    private float _currentHorizontalInput;
-    private Vector3 _startTouchPosition;
+    private float _rawHorizontalInput; 
+    private float _smoothedHorizontalInput; 
+    private float _currentSmoothVelocity; 
 
     void Update()
     {
         transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
-        HandleInput();
+
+        GetRawInput();
+
+        _smoothedHorizontalInput = Mathf.SmoothDamp(
+            _smoothedHorizontalInput,
+            _rawHorizontalInput,
+            ref _currentSmoothVelocity,
+            inputSmoothTime
+        );
 
         Vector3 newPosition = transform.position;
-        newPosition.x += _currentHorizontalInput * sidewaySpeed * Time.deltaTime;
+        newPosition.x += _smoothedHorizontalInput * sidewaySpeed * Time.deltaTime;
         newPosition.x = Mathf.Clamp(newPosition.x, -horizontalLimit, horizontalLimit);
         transform.position = newPosition;
     }
 
-    private void HandleInput()
+    private void GetRawInput()
     {
-        _currentHorizontalInput = 0f;
+        _rawHorizontalInput = 0f; 
 
         if (useAccelerometer)
         {
-            _currentHorizontalInput = Input.acceleration.x;
+            _rawHorizontalInput = Input.acceleration.x;
         }
-        else 
+        else
         {
             if (Input.touchCount > 0)
             {
                 Touch touch = Input.GetTouch(0);
 
-                if (touch.phase == TouchPhase.Began)
+                if (touch.phase == TouchPhase.Moved)
                 {
-                    _startTouchPosition = touch.position;
-                }
-                else if (touch.phase == TouchPhase.Moved)
-                {
-                    float deltaX = touch.position.x - _startTouchPosition.x;
-                    _currentHorizontalInput = deltaX * swipeSensitivity;
-                    _startTouchPosition = touch.position;
+                    _rawHorizontalInput = touch.deltaPosition.x * swipeSensitivity;
                 }
             }
             else
             {
-                if (Input.GetMouseButtonDown(0)) 
+                if (Input.GetMouseButton(0))
                 {
-                    _lastMousePosition = Input.mousePosition; 
-                    _isMouseDown = true;
-                }
-                else if (Input.GetMouseButtonUp(0)) 
-                {
-                    _isMouseDown = false;
-                    _currentHorizontalInput = 0f; 
-                }
-                else if (Input.GetMouseButton(0) && _isMouseDown) 
-                {
-                    float deltaX = Input.mousePosition.x - _lastMousePosition.x;
-                    _currentHorizontalInput = deltaX * swipeSensitivity * 0.1f; 
-                    _lastMousePosition = Input.mousePosition; 
+                    _rawHorizontalInput = Input.GetAxis("Mouse X") * mouseSensitivity;
                 }
             }
         }
