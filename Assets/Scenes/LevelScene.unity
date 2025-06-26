@@ -1132,7 +1132,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1356120988}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f702364c2f28874981fe94f272c926e, type: 3}
+  m_Script: {fileID: 11500000, guid: b3cde24be6e11b144878c41dc0fd728b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1514542181
@@ -1415,6 +1415,10 @@ MonoBehaviour:
   coinsIncreasePerLevel: 2
   coinCountText: {fileID: 283503410}
   levelText: {fileID: 952222632}
+  gameSceneName: LevelScene
+  winSceneName: WinScene
+  loseSceneName: GameOverScene
+  menuSceneName: Menu
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

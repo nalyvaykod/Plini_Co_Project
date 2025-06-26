@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
-using TMPro; 
+using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -11,13 +11,18 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int coinsIncreasePerLevel = 2;
     private int coinsToWin;
     private int currentCoins = 0;
-
     private int currentLevel = 1;
 
-    [Header("UI References")]
-    [SerializeField] private TextMeshProUGUI coinCountText; 
-    [SerializeField] private TextMeshProUGUI levelText; 
+    [Header("UI References - Dynamically Assigned")]
+    private TextMeshProUGUI coinCountText;
+    private TextMeshProUGUI levelText;
 
+
+    [Header("Scene Names")]
+    [SerializeField] private string gameSceneName = "GameScene";
+    [SerializeField] private string winSceneName = "WinScene";
+    [SerializeField] private string loseSceneName = "LoseScene";
+    [SerializeField] private string menuSceneName = "Menu";
 
     private bool gameEnded = false;
 
@@ -29,26 +34,92 @@ public class GameManager : MonoBehaviour
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        InitializeGame();
+    }
+
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        Time.timeScale = 1f;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        Debug.Log($"Scene loaded: {scene.name}");
+
+        if (scene.name == gameSceneName)
+        {
+            FindAndAssignUIElements();
+
+            InitializeGame();
+
+        }
+        else if (scene.name == winSceneName || scene.name == loseSceneName || scene.name == menuSceneName)
+        {
+            Time.timeScale = 0f;
+            coinCountText = null;
+            levelText = null;
         }
         else
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            Time.timeScale = 1f;
+        }
+    }
+
+    private void FindAndAssignUIElements()
+    {
+        GameObject coinTextGO = GameObject.Find("CoinCountText");
+        GameObject levelTextGO = GameObject.Find("LevelText");
+
+        if (coinTextGO != null)
+        {
+            coinCountText = coinTextGO.GetComponent<TextMeshProUGUI>();
+            if (coinCountText == null)
+            {
+                Debug.LogError("Coin Count Text GO found, but TextMeshProUGUI component missing!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Coin Count Text (TextMeshProUGUI) object with name 'CoinCountText' not found on the scene! Check spelling and object activity.");
         }
 
-        currentLevel = PlayerPrefs.GetInt(CurrentLevelKey, 1);
+        if (levelTextGO != null)
+        {
+            levelText = levelTextGO.GetComponent<TextMeshProUGUI>();
+            if (levelText == null)
+            {
+                Debug.LogError("Level Text GO found, but TextMeshProUGUI component missing!");
+            }
+        }
+        else
+        {
+            Debug.LogError("Level Text (TextMeshProUGUI) object with name 'LevelText' not found on the scene! Check spelling and object activity.");
+        }
 
-        coinsToWin = baseCoinsToWin + (currentLevel - 1) * coinsIncreasePerLevel;
-
-        currentCoins = 0;
         UpdateCoinUI();
         UpdateLevelUI();
+    }
 
-        // Переконайтеся, що панелі приховані на старті, якщо ви їх використовуєте
-        // if (winPanel != null) winPanel.SetActive(false);
-        // if (losePanel != null) losePanel.SetActive(false);
-
+    private void InitializeGame()
+    {
+        currentLevel = PlayerPrefs.GetInt(CurrentLevelKey, 1);
+        coinsToWin = baseCoinsToWin + (currentLevel - 1) * coinsIncreasePerLevel;
+        currentCoins = 0;
+        gameEnded = false;
         Time.timeScale = 1f;
+
+        Debug.Log($"Game Initialized for Level {currentLevel}: Coins to Win {coinsToWin}, Current Coins {currentCoins}");
     }
 
     void Update()
@@ -75,13 +146,13 @@ public class GameManager : MonoBehaviour
         if (gameEnded) return;
         gameEnded = true;
         Debug.Log("You Win!");
-        Time.timeScale = 0f;
-        // if (winPanel != null) winPanel.SetActive(true);
-        // Буде виклик сцени перемоги (зробити пізніше)
 
         currentLevel++;
         PlayerPrefs.SetInt(CurrentLevelKey, currentLevel);
         PlayerPrefs.Save();
+
+        Time.timeScale = 0f;
+        SceneManager.LoadScene(winSceneName);
     }
 
     public void LoseGame()
@@ -89,49 +160,55 @@ public class GameManager : MonoBehaviour
         if (gameEnded) return;
         gameEnded = true;
         Debug.Log("You Lose!");
+
         Time.timeScale = 0f;
-        // if (losePanel != null) losePanel.SetActive(true);
-        // Буде виклик сцени поразки (зробити пізніше)
+        SceneManager.LoadScene(loseSceneName);
     }
 
     private void UpdateCoinUI()
     {
-        // Перевіряємо, чи призначено TextMeshProUGUI об'єкт
         if (coinCountText != null)
         {
             coinCountText.text = "Coins: " + currentCoins + " / " + coinsToWin;
+        }
+        else
+        {
+            Debug.LogWarning("Coin Count Text (TextMeshProUGUI) is null. Cannot update UI. Ensure 'CoinCountText' object exists and is active on the scene.");
         }
     }
 
     private void UpdateLevelUI()
     {
-        // Перевіряємо, чи призначено TextMeshProUGUI об'єкт
         if (levelText != null)
         {
             levelText.text = "Level: " + currentLevel;
+        }
+        else
+        {
+            Debug.LogWarning("Level Text (TextMeshProUGUI) is null. Cannot update UI. Ensure 'LevelText' object exists and is active on the scene.");
         }
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        Debug.Log("Restarting current game scene...");
+        SceneManager.LoadScene(gameSceneName);
     }
 
     public void GoToNextLevel()
     {
-        Time.timeScale = 1f;
-        // SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        // некст рівень
+        Debug.Log("Going to next level...");
+        SceneManager.LoadScene(gameSceneName);
+    }
+
+    public void GoToMainMenu()
+    {
+        Debug.Log("Going to Main Menu...");
+        SceneManager.LoadScene(menuSceneName);
     }
 
     public bool IsGameEnded()
     {
         return gameEnded;
-    }
-
-    void OnDisable()
-    {
-        Time.timeScale = 1f;
     }
 }
