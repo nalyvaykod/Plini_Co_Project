@@ -1,68 +1,99 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float forwardSpeed = 5f;
-    [SerializeField] private float sidewaySpeed = 7f;
+    [SerializeField] private float sidewaySpeed = 10f;
     [SerializeField] private float horizontalLimit = 3f;
-    [SerializeField] private float inputSmoothTime = 0.1f; 
 
     [Header("Input Settings")]
     [SerializeField] private bool useAccelerometer = false;
-    [SerializeField] private float swipeSensitivity = 0.005f;
-    [SerializeField] private float mouseSensitivity = 0.1f;
+    [SerializeField] private float swipeSensitivity = 1f;
+    [SerializeField] private float mouseSensitivity = 3f;
+    [Range(0.1f, 2.0f)]
+    [SerializeField] private float maxRawInputMagnitude = 1.0f;
+    [Range(0.0f, 0.05f)]
+    [SerializeField] private float inputDeadZone = 0.005f;
 
-    private float _rawHorizontalInput; 
-    private float _smoothedHorizontalInput; 
-    private float _currentSmoothVelocity; 
+    [Header("Game Over Settings")]
+    [SerializeField] private string obstacleTag = "Obstacle";
+
+    private Rigidbody _rb;
+    private float _currentHorizontalInput;
+
+    void Awake()
+    {
+        _rb = GetComponent<Rigidbody>();
+        if (_rb == null)
+        {
+            _rb = gameObject.AddComponent<Rigidbody>();
+        }
+        _rb.isKinematic = true;
+        _rb.useGravity = false;
+    }
 
     void Update()
     {
         transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
-
         GetRawInput();
-
-        _smoothedHorizontalInput = Mathf.SmoothDamp(
-            _smoothedHorizontalInput,
-            _rawHorizontalInput,
-            ref _currentSmoothVelocity,
-            inputSmoothTime
-        );
-
         Vector3 newPosition = transform.position;
-        newPosition.x += _smoothedHorizontalInput * sidewaySpeed * Time.deltaTime;
+        newPosition.x += _currentHorizontalInput * sidewaySpeed * Time.deltaTime;
         newPosition.x = Mathf.Clamp(newPosition.x, -horizontalLimit, horizontalLimit);
         transform.position = newPosition;
     }
 
     private void GetRawInput()
     {
-        _rawHorizontalInput = 0f; 
-
+        float rawInputThisFrame = 0f;
         if (useAccelerometer)
         {
-            _rawHorizontalInput = Input.acceleration.x;
+            rawInputThisFrame = Input.acceleration.x;
         }
         else
         {
             if (Input.touchCount > 0)
             {
                 Touch touch = Input.GetTouch(0);
-
                 if (touch.phase == TouchPhase.Moved)
                 {
-                    _rawHorizontalInput = touch.deltaPosition.x * swipeSensitivity;
+                    rawInputThisFrame = touch.deltaPosition.x * swipeSensitivity;
                 }
             }
             else
             {
                 if (Input.GetMouseButton(0))
                 {
-                    _rawHorizontalInput = Input.GetAxis("Mouse X") * mouseSensitivity;
+                    rawInputThisFrame = Input.GetAxis("Mouse X") * mouseSensitivity;
                 }
             }
         }
+
+        if (Mathf.Abs(rawInputThisFrame) < inputDeadZone)
+        {
+            _currentHorizontalInput = 0f;
+        }
+        else
+        {
+            _currentHorizontalInput = Mathf.Clamp(rawInputThisFrame, -maxRawInputMagnitude, maxRawInputMagnitude);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("Trigger detected with: " + other.gameObject.name + " Tag: " + other.gameObject.tag);
+        if (other.gameObject.CompareTag(obstacleTag))
+        {
+            Debug.Log("Game Over! Triggered with an obstacle: " + other.gameObject.name);
+            GameOver();
+        }
+    }
+
+    private void GameOver()
+    {
+        Destroy(gameObject);
+
     }
 
     private void OnDrawGizmos()

@@ -11,7 +11,7 @@ public class LevelGenerator : MonoBehaviour
     public float segmentLength = 10f;
 
     [Tooltip("The number of segments that should always be present in the scene simultaneously.")]
-    public int segmentsToKeep = 3;
+    public int segmentsToKeep = 5;
 
     [Header("Spawn Point Settings")]
     [Tooltip("Reference to the Transform object that indicates where the next segment should spawn.")]
@@ -26,8 +26,8 @@ public class LevelGenerator : MonoBehaviour
 
     [Header("Generation Control")]
     [Tooltip("How far (in Unity units) ahead of the player's current segment should the next segment be generated? Higher values mean earlier generation.")]
-    [Range(0f, 50f)] 
-    public float preGenerationDistance = 20f; 
+    [Range(0f, 100f)]
+    public float preGenerationDistance = 40f;
 
     private List<GameObject> activeSegments = new List<GameObject>();
     private GameObject spawnedPlayer;
@@ -67,7 +67,8 @@ public class LevelGenerator : MonoBehaviour
             return;
         }
 
-        spawnPoint.position = new Vector3(0, spawnPoint.position.y, playerTransform.position.z + (segmentLength / 2f));
+        spawnPoint.position = new Vector3(spawnPoint.position.x, spawnPoint.position.y, playerTransform.position.z);
+        spawnPoint.position += Vector3.forward * (segmentLength / 2f);
 
         for (int i = 0; i < segmentsToKeep; i++)
         {
@@ -127,7 +128,7 @@ public class LevelGenerator : MonoBehaviour
         spawnPoint.position = new Vector3(0, spawnPoint.position.y, 0);
 
         Vector3 playerSpawnPosition = spawnPoint.position;
-        playerSpawnPosition.z -= ((segmentLength / 2f) + 1f);
+        playerSpawnPosition.z -= (segmentLength / 2f);
         playerSpawnPosition.y += 0.5f;
 
         playerSpawnPosition.z += 0.25f;
@@ -137,4 +138,6 @@ public class LevelGenerator : MonoBehaviour
         playerTransform = spawnedPlayer.transform;
         Debug.Log($"Player '{spawnedPlayer.name}' spawned at position: {spawnedPlayer.transform.position:F2}.", spawnedPlayer);
     }
+
+    
 }
