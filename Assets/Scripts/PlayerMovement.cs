@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Movement Settings")]
@@ -20,6 +21,9 @@ public class PlayerMovement : MonoBehaviour
     [Header("Game Over Settings")]
     [SerializeField] private string obstacleTag = "Obstacle";
 
+    [Header("Coin Settings")] 
+    [SerializeField] private string coinTag = "Coin"; 
+
     private Rigidbody _rb;
     private float _currentHorizontalInput;
 
@@ -36,6 +40,13 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (GameManager.Instance != null && GameManager.Instance.IsGameEnded())
+        {
+            _rb.velocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+            return; 
+        }
+
         transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
         GetRawInput();
         Vector3 newPosition = transform.position;
@@ -82,18 +93,23 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Trigger detected with: " + other.gameObject.name + " Tag: " + other.gameObject.tag);
         if (other.gameObject.CompareTag(obstacleTag))
         {
             Debug.Log("Game Over! Triggered with an obstacle: " + other.gameObject.name);
-            GameOver();
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.LoseGame();
+            }
         }
-    }
-
-    private void GameOver()
-    {
-        Destroy(gameObject);
-
+        else if (other.gameObject.CompareTag(coinTag)) 
+        {
+            Debug.Log("Coin collected: " + other.gameObject.name);
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.CollectCoin();
+            }
+            Destroy(other.gameObject);
+        }
     }
 
     private void OnDrawGizmos()
